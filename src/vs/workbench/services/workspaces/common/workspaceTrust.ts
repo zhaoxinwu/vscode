@@ -235,6 +235,10 @@ export class WorkspaceTrustManagementService extends Disposable implements IWork
 			return true;
 		}
 
+		if (this.environmentService.extensionTestsLocationURI) {
+			return true; // trust running tests with vscode-test
+		}
+
 		if (!this._initialized) {
 			return false;
 		}
@@ -242,10 +246,6 @@ export class WorkspaceTrustManagementService extends Disposable implements IWork
 		// Remote - remote authority explicitly sets workspace trust
 		if (this.environmentService.remoteAuthority && this._remoteAuthority?.options?.isTrusted !== undefined) {
 			return this._remoteAuthority.options.isTrusted;
-		}
-
-		if (this.environmentService.extensionTestsLocationURI) {
-			return true; // trust running tests with vscode-test
 		}
 
 		if (this.workspaceService.getWorkbenchState() === WorkbenchState.EMPTY) {
