@@ -294,8 +294,13 @@ export class ExtensionManagementService extends Disposable implements IExtension
 			return (await installExtensionTask.resultPromise).local;
 		} else {
 			installExtensionTask = this.createInstallFromGalleryExtensionTask(extension, options);
-			// return this.runInstallFromGalleryExtensionTask(installExtensionTask);
-			throw new Error();
+			const manifest = await this.galleryService.getManifest(extension, CancellationToken.None);
+			if (manifest === null) {
+				const error = new ExtensionManagementError(`Missing manifest for extension ${extension.identifier.id}`, INSTALL_ERROR_VALIDATING);
+				this.logService.error(`Failed to install extension:`, extension.identifier.id, error.message);
+				throw error;
+			}
+			return (await this.runInstallGalleryExtensionTask(installExtensionTask, manifest, options)).local;
 		}
 	}
 
@@ -342,63 +347,51 @@ export class ExtensionManagementService extends Disposable implements IExtension
 		return installExtensionTask;
 	}
 
-	// private async runInstallFromGalleryExtensionTask(installExtensionTask: InstallExtensionTask, options: InstallOptions, token: CancellationToken): Promise<InstallResult> {
-	// 	if (!options.donotIncludePackAndDependencies) {
-	// 		this.logService.info('Installing the extension without checking dependencies and pack', installExtensionTask.extension.identifier.id);
-	// 		return installExtensionTask.run();
-	// 	}
+	private async runInstallGalleryExtensionTask(installExtensionTask: InstallExtensionTask, manifest: IExtensionManifest, options: InstallOptions): Promise<InstallResult> {
+		if (options.donotIncludePackAndDependencies) {
+			this.logService.info('Installing the extension without checking dependencies and pack', installExtensionTask.extension.identifier.id);
+			return installExtensionTask.run();
+		}
 
-	// 	const installTasks: (InstallExtensionTask & IExtensionManifest)[] = [];
-	// 	const extensions2 = ;
-	// 	for (const { gallery, manifest } of await this.getAllExtensionsToInstall(installExtensionTask.extension, token)) {
-	// 		const key = new ExtensionIdentifierWithVersion(gallery.identifier, gallery.version).key();
-	// 		if (!this.installingExtensions.has(key)) {
-	// 			installTasks.push({ ...this.createInstallFromGalleryExtensionTask(gallery, { ...options, donotIncludePackAndDependencies: true }), manifest })
-	// 		}
-	// 	}
+		const extensionsToInstallMap = new Map<string, { task: InstallExtensionTask, manifest: IExtensionManifest }>();
+		extensionsToInstallMap.set(installExtensionTask.extension.identifier.id.toLowerCase(), { task: installExtensionTask, manifest });
 
-	// 	let installResult: InstallResult | undefined;
-	// 	const hasDependents = extensions.some(e => !areSameExtensions(e.gallery.identifier, extension.identifier) && e.manifest.extensionDependencies?.some(id => areSameExtensions({ id }, extension.identifier)));
-	// 	while (installTasks.length) {
-	// 		const installed = await this.getInstalled();
-	// 		const extensionsToInstall = extensions.filter(e => !e.manifest.extensionDependencies?.length /* No dependencies */
-	// 			|| e.manifest.extensionDependencies.every(id => installed.some(local => areSameExtensions({ id }, local.identifier))
-	// 				|| extensions.every(({ gallery }) => !areSameExtensions({ id }, gallery.identifier))));
+		const allDepsAndPackExtensionsToInstall = await this.getAllDepsAndPackExtensionsToInstall(installExtensionTask.extension.identifier, manifest, CancellationToken.None);
+		let installExtensionHasDependents: boolean = false;
+		for (const { gallery, manifest } of allDepsAndPackExtensionsToInstall) {
+			installExtensionHasDependents = installExtensionHasDependents || !!manifest.extensionDependencies?.some(id => areSameExtensions({ id }, installExtensionTask.extension.identifier));
+			if (this.installingExtensions.has(new ExtensionIdentifierWithVersion(gallery.identifier, gallery.version).key())) {
+				this.logService.info('Extension is already requested to install', gallery.identifier.id);
+			} else {
+				const task = this.createInstallFromGalleryExtensionTask(gallery, { ...options, donotIncludePackAndDependencies: true });
+				extensionsToInstallMap.set(gallery.identifier.id.toLowerCase(), { task, manifest });
+			}
+		}
 
-	// 		if (!extensionsToInstall.length) {
-	// 			extensionsToInstall.push(...extensions);
-	// 			this.logService.info('Found extensions with circular dependencies', extensions.map(({ gallery }) => gallery.identifier.id));
-	// 		}
+		const installResults: InstallResult[] = [];
+		while (extensionsToInstallMap.size) {
+			const extensionsWithoutDepsToInstall = [...extensionsToInstallMap.values()].filter(({ manifest }) => !manifest.extensionDependencies?.some(id => extensionsToInstallMap.has(id.toLowerCase())));
+			let extensionsToInstall;
+			if (extensionsWithoutDepsToInstall.length) {
+				extensionsToInstall = extensionsToInstallMap.size === 1 ? extensionsWithoutDepsToInstall
+					/* If the main extension has no dependents remove it and install it at the end */
+					: extensionsWithoutDepsToInstall.filter(({ task }) => !(task === installExtensionTask && !installExtensionHasDependents));
+			} else {
+				this.logService.info('Found extensions with circular dependencies', extensionsWithoutDepsToInstall.map(({ task }) => task.extension.identifier.id));
+				extensionsToInstall = [...extensionsToInstallMap.values()];
+			}
+			await Promise.all(extensionsToInstall.map(async ({ task }) => {
+				installResults.push(await task.run());
+				extensionsToInstallMap.delete(task.extension.identifier.id.toLowerCase());
+			}));
+		}
 
-	// 		for (const extensionToInstall of extensionsToInstall) {
-	// 			if (areSameExtensions(extension.identifier, extensionToInstall.gallery.identifier)) {
-	// 				if (hasDependents || extensions.length === 1) {
-	// 					installResult = await this.installGalleryExtension(extensionToInstall.gallery, options, token);
-	// 					this._onDidInstallExtension.fire({ identifier: extension.identifier, gallery: installResult.gallery, local: installResult.local, operation: installResult.operation });
-	// 				} else {
-	// 					continue;
-	// 				}
-	// 			} else {
-	// 				const key = new ExtensionIdentifierWithVersion(extensionToInstall.gallery.identifier, extensionToInstall.gallery.version).key();
-	// 				const installed = await this.getInstalled();
-	// 				if (installed.find(local => areSameExtensions(local.identifier, extensionToInstall.gallery.identifier))) {
-	// 					this.logService.info('Extensions is already installed', extensionToInstall.gallery.identifier.id);
-	// 				} else if (this.installingExtensions.has(key)) {
-	// 					this.logService.info('Extensions is already requested to install', extensionToInstall.gallery.identifier.id);
-	// 				} else {
-	// 					await this.createInstallFromGalleryExtensionTask(extensionToInstall.gallery,);
-	// 				}
-	// 			}
-	// 			extensions.splice(extensions.indexOf(extensionToInstall), 1);
-	// 		}
-	// 	}
-
-	// 	if (!installResult) {
-	// 		throw new Error('Extension is not installed');
-	// 	}
-
-	// 	return installResult;
-	// }
+		const installResult = installResults.find(({ local }) => areSameExtensions(local.identifier, installExtensionTask.extension.identifier));
+		if (installResult) {
+			return installResult;
+		}
+		throw new Error('Extension is not installed');
+	}
 
 	private async installGalleryExtension(gallery: IGalleryExtension, options: InstallOptions, token: CancellationToken): Promise<InstallResult> {
 		const startTime = new Date().getTime();
@@ -427,54 +420,51 @@ export class ExtensionManagementService extends Disposable implements IExtension
 		}
 	}
 
-	// private async getAllExtensionsToInstall(extension: IGalleryExtension, token: CancellationToken): Promise<{ gallery: IGalleryExtension, manifest: IExtensionManifest }[]> {
-	// 	const manifest = await this.galleryService.getManifest(extension, token);
-	// 	if (manifest === null) {
-	// 		throw new ExtensionManagementError(`Missing manifest for extension ${extension.identifier.id}`, INSTALL_ERROR_VALIDATING);
-	// 	}
+	private async getAllDepsAndPackExtensionsToInstall(extensionIdentifier: IExtensionIdentifier, manifest: IExtensionManifest, token: CancellationToken): Promise<{ gallery: IGalleryExtension, manifest: IExtensionManifest }[]> {
+		let installed = await this.getInstalled();
+		const knownIdentifiers = [extensionIdentifier, ...(installed).map(i => i.identifier)];
 
-	// 	const extensionsToInstall = [{ gallery: extension, manifest }];
-	// 	const installed = await this.getInstalled();
+		const allDependenciesAndPacks: { gallery: IGalleryExtension, manifest: IExtensionManifest }[] = [];
+		const collectDependenciesAndPackExtensionsToInstall = async (extensionIdentifier: IExtensionIdentifier, manifest: IExtensionManifest): Promise<void> => {
+			const dependenciesAndPackExtensions: string[] = manifest.extensionDependencies || [];
+			if (manifest.extensionPack) {
+				const existing = installed.find(e => areSameExtensions(e.identifier, extensionIdentifier));
+				for (const extension of manifest.extensionPack) {
+					// add only those extensions which are new in currently installed extension
+					if (!(existing && existing.manifest.extensionPack && existing.manifest.extensionPack.some(old => areSameExtensions({ id: old }, { id: extension })))) {
+						if (dependenciesAndPackExtensions.every(e => !areSameExtensions({ id: e }, { id: extension }))) {
+							dependenciesAndPackExtensions.push(extension);
+						}
+					}
+				}
+			}
 
-	// 	const collectDependenciesAndPackExtensionsToInstall = async (gallery: IGalleryExtension, manifest: IExtensionManifest): Promise<void> => {
-	// 		const dependenciesAndPackExtensions: string[] = manifest.extensionDependencies || [];
-	// 		if (manifest.extensionPack) {
-	// 			const existing = installed.find(e => areSameExtensions(e.identifier, gallery.identifier));
-	// 			for (const extension of manifest.extensionPack) {
-	// 				// add only those extensions which are new in currently installed extension
-	// 				if (!(existing && existing.manifest.extensionPack && existing.manifest.extensionPack.some(old => areSameExtensions({ id: old }, { id: extension })))) {
-	// 					if (dependenciesAndPackExtensions.every(e => !areSameExtensions({ id: e }, { id: extension }))) {
-	// 						dependenciesAndPackExtensions.push(extension);
-	// 					}
-	// 				}
-	// 			}
-	// 		}
+			if (dependenciesAndPackExtensions.length) {
+				// filter out installed and known extensions
+				const identifiers = [...knownIdentifiers, ...allDependenciesAndPacks.map(r => r.gallery.identifier)];
+				const names = dependenciesAndPackExtensions.filter(id => identifiers.every(galleryIdentifier => !areSameExtensions(galleryIdentifier, { id })));
+				if (names.length) {
+					const galleryResult = await this.galleryService.query({ names, pageSize: dependenciesAndPackExtensions.length }, CancellationToken.None);
+					for (const galleryExtension of galleryResult.firstPage) {
+						if (identifiers.find(identifier => areSameExtensions(identifier, galleryExtension.identifier))) {
+							continue;
+						}
+						const compatibleExtension = await this.checkAndGetCompatibleVersion(galleryExtension);
+						const manifest = await this.galleryService.getManifest(compatibleExtension, CancellationToken.None);
+						if (manifest === null) {
+							throw new ExtensionManagementError(`Missing manifest for extension ${compatibleExtension.identifier.id}`, INSTALL_ERROR_VALIDATING);
+						}
+						allDependenciesAndPacks.push({ gallery: compatibleExtension, manifest });
+						await collectDependenciesAndPackExtensionsToInstall(compatibleExtension.identifier, manifest);
+					}
+				}
+			}
+		};
 
-	// 		if (dependenciesAndPackExtensions.length) {
-	// 			// filter out installed and known extensions
-	// 			const identifiers = [...installed.map(i => i.identifier), ...extensionsToInstall.map(r => r.gallery.identifier)];
-	// 			const names = dependenciesAndPackExtensions.filter(id => identifiers.every(galleryIdentifier => !areSameExtensions(galleryIdentifier, { id })));
-	// 			if (names.length) {
-	// 				const galleryResult = await this.galleryService.query({ names, pageSize: dependenciesAndPackExtensions.length }, CancellationToken.None);
-	// 				for (const galleryExtension of galleryResult.firstPage) {
-	// 					if (identifiers.find(identifier => areSameExtensions(identifier, galleryExtension.identifier))) {
-	// 						continue;
-	// 					}
-	// 					const compatibleExtension = await this.checkAndGetCompatibleVersion(galleryExtension);
-	// 					const manifest = await this.galleryService.getManifest(compatibleExtension, CancellationToken.None);
-	// 					if (manifest === null) {
-	// 						throw new ExtensionManagementError(`Missing manifest for extension ${compatibleExtension.identifier.id}`, INSTALL_ERROR_VALIDATING);
-	// 					}
-	// 					extensionsToInstall.push({ gallery: compatibleExtension, manifest });
-	// 					await collectDependenciesAndPackExtensionsToInstall(compatibleExtension, manifest);
-	// 				}
-	// 			}
-	// 		}
-	// 	};
-
-	// 	await collectDependenciesAndPackExtensionsToInstall(extension, manifest);
-	// 	return extensionsToInstall;
-	// }
+		await collectDependenciesAndPackExtensionsToInstall(extensionIdentifier, manifest);
+		installed = await this.getInstalled();
+		return allDependenciesAndPacks.filter(e => !installed.some(i => areSameExtensions(i.identifier, e.gallery.identifier)));
+	}
 
 	private async checkAndGetCompatibleVersion(extension: IGalleryExtension): Promise<IGalleryExtension> {
 		if (await this.isMalicious(extension)) {
