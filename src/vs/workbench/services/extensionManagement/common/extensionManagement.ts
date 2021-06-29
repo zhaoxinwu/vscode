@@ -75,7 +75,7 @@ export interface IWorkbenchExtensionEnablementService {
 	 * Returns the enablement states for the given extensions
 	 * @param extensions list of extensions
 	 */
-	getEnablementStates(extensions: IExtension[]): EnablementState[];
+	getEnablementStates(extensions: IExtension[], ignoreWorkspaceTrust?: boolean): EnablementState[];
 
 	/**
 	 * Returns `true` if the enablement can be changed.
@@ -99,6 +99,11 @@ export interface IWorkbenchExtensionEnablementService {
 	 * This will
 	 */
 	isDisabledGlobally(extension: IExtension): boolean;
+
+
+
+
+	// isExtensionAndAllItsDisabledDependenciesDisabledByWorkspaceTrust(extension: IExtension): boolean;
 
 	/**
 	 * Enable or disable the given extension.

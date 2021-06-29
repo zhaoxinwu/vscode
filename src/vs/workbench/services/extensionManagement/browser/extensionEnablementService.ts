@@ -100,9 +100,14 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return this._computeEnablementState(extension, this.extensionsManager.extensions);
 	}
 
-	getEnablementStates(extensions: IExtension[]): EnablementState[] {
+	getEnablementStates(extensions: IExtension[], ignoreWorkspaceTrust?: boolean): EnablementState[] {
 		const extensionsEnablements = new Map<IExtension, EnablementState>();
-		return extensions.map(extension => this._computeEnablementState(extension, extensions, extensionsEnablements));
+		return extensions.map(extension => this._computeEnablementState(extension, extensions, extensionsEnablements, ignoreWorkspaceTrust));
+	}
+
+	getDependenciesEnablementStates(extension: IExtension): [IExtension, EnablementState][] {
+		const dependencies = getExtensionDependencies(this.extensionsManager.extensions, extension);
+		return this.getEnablementStates(dependencies).map((enablementState, index) => ([dependencies[index], enablementState]));
 	}
 
 	canChangeEnablement(extension: IExtension): boolean {
@@ -219,7 +224,7 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return this._isDisabledGlobally(extension.identifier);
 	}
 
-	private _computeEnablementState(extension: IExtension, extensions: ReadonlyArray<IExtension>, computedEnablementStates?: Map<IExtension, EnablementState>): EnablementState {
+	private _computeEnablementState(extension: IExtension, extensions: ReadonlyArray<IExtension>, computedEnablementStates?: Map<IExtension, EnablementState>, ignoreWorkspaceTrust?: boolean): EnablementState {
 		computedEnablementStates = computedEnablementStates ?? new Map<IExtension, EnablementState>();
 		let enablementState = computedEnablementStates.get(extension);
 		if (enablementState !== undefined) {
@@ -245,7 +250,7 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		else {
 			enablementState = this._getUserEnablementState(extension.identifier);
 			if (this._isEnabledEnablementState(enablementState)) {
-				if (this._isDisabledByWorkspaceTrust(extension, extensions)) {
+				if (!ignoreWorkspaceTrust && this._isDisabledByWorkspaceTrust(extension, extensions)) {
 					enablementState = EnablementState.DisabledByTrustRequirement;
 				}
 
@@ -322,9 +327,7 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 			return false;
 		}
 
-		// Find dependencies from the same server as of the extension
-		const installedExtensions = extensions.filter(e => this.extensionManagementServerService.getExtensionManagementServer(e) === this.extensionManagementServerService.getExtensionManagementServer(extension));
-		return [extension, ...getExtensionDependencies(installedExtensions, extension)].some(extension => this.extensionManifestPropertiesService.getExtensionUntrustedWorkspaceSupportType(extension.manifest) === false);
+		return this.extensionManifestPropertiesService.getExtensionUntrustedWorkspaceSupportType(extension.manifest) === false;
 	}
 
 	private _isDisabledByExtensionDependency(extension: IExtension, extensions: ReadonlyArray<IExtension>, computedEnablementStates: Map<IExtension, EnablementState>): boolean {
@@ -505,14 +508,8 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	public async updateEnablementByWorkspaceTrustRequirement(): Promise<void> {
 		await this.extensionsManager.whenInitialized();
 
-		const disabledExtensions = this.extensionsManager.extensions
-			.filter(extension => {
-				const dependencies = getExtensionDependencies(this.extensionsManager.extensions, extension);
-				const isEnabled = this._isEnabledEnablementState(this._getUserEnablementState(extension.identifier));
-
-				return isEnabled && (this.extensionManifestPropertiesService.getExtensionUntrustedWorkspaceSupportType(extension.manifest) === false ||
-					dependencies.some(ext => this.extensionManifestPropertiesService.getExtensionUntrustedWorkspaceSupportType(ext.manifest) === false));
-			});
+		const disabledExtensions = this.extensionsManager.extensions.filter(extension =>
+			this.getEnablementState(extension) === EnablementState.DisabledByTrustRequirement || this.getDependenciesEnablementStates(extension).every(([, enablementState]) => enablementState === EnablementState.DisabledByTrustRequirement));
 
 		if (disabledExtensions.length) {
 			this._onEnablementChanged.fire(disabledExtensions);

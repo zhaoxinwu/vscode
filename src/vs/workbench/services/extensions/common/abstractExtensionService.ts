@@ -794,9 +794,9 @@ export abstract class AbstractExtensionService extends Disposable implements IEx
 			}
 		}
 
-		const enablementStates = this._extensionEnablementService.getEnablementStates(mappedExtensions);
+		const enablementStates = this._extensionEnablementService.getEnablementStates(mappedExtensions, ignoreWorkspaceTrust);
 		for (let index = 0; index < enablementStates.length; index++) {
-			if (enablementStates[index] === EnablementState.EnabledGlobally || enablementStates[index] === EnablementState.EnabledWorkspace || (ignoreWorkspaceTrust && enablementStates[index] === EnablementState.DisabledByTrustRequirement)) {
+			if (enablementStates[index] === EnablementState.EnabledGlobally || enablementStates[index] === EnablementState.EnabledWorkspace) {
 				enabledExtensions.push(extensionsToCheck[index]);
 			}
 		}
