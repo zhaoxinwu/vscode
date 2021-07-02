@@ -971,7 +971,7 @@ class PreferencesActionsContribution extends Disposable implements IWorkbenchCon
 					icon: keybindingsRecordKeysIcon,
 					keybinding: {
 						weight: KeybindingWeight.WorkbenchContrib,
-						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR),
+						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR, CONTEXT_KEYBINDINGS_SEARCH_FOCUS),
 						primary: KeyMod.Alt | KeyCode.KEY_K,
 						mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_K },
 					},
@@ -998,7 +998,7 @@ class PreferencesActionsContribution extends Disposable implements IWorkbenchCon
 					icon: keybindingsSortIcon,
 					keybinding: {
 						weight: KeybindingWeight.WorkbenchContrib,
-						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR),
+						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR, CONTEXT_KEYBINDINGS_SEARCH_FOCUS),
 						primary: KeyMod.Alt | KeyCode.KEY_P,
 						mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_P },
 					},
@@ -1025,7 +1025,7 @@ class PreferencesActionsContribution extends Disposable implements IWorkbenchCon
 					icon: preferencesClearInputIcon,
 					keybinding: {
 						weight: KeybindingWeight.WorkbenchContrib,
-						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR),
+						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR, CONTEXT_KEYBINDINGS_SEARCH_FOCUS),
 						primary: KeyCode.Escape,
 					},
 					menu: {
