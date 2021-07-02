@@ -43,14 +43,14 @@ import { MenuRegistry, MenuId, isIMenuItem, IMenuService } from 'vs/platform/act
 import { IListAccessibilityProvider } from 'vs/base/browser/ui/list/listWidget';
 import { Color, RGBA } from 'vs/base/common/color';
 import { WORKBENCH_BACKGROUND } from 'vs/workbench/common/theme';
-import { IBaseActionViewItemOptions } from 'vs/base/browser/ui/actionbar/actionViewItems';
+import { IActionViewItemOptions } from 'vs/base/browser/ui/actionbar/actionViewItems';
 import { IKeybindingItemEntry, IKeybindingsEditorPane } from 'vs/workbench/services/preferences/common/preferences';
 import { keybindingsAddIcon, keybindingsEditIcon } from 'vs/workbench/contrib/preferences/browser/preferencesIcons';
 import { ITableRenderer, ITableVirtualDelegate } from 'vs/base/browser/ui/table/table';
 import { KeybindingsEditorInput } from 'vs/workbench/services/preferences/browser/keybindingsEditorInput';
 import { IEditorOptions } from 'vs/platform/editor/common/editor';
 import { CompositeMenuActions } from 'vs/workbench/browser/actions';
-import { ToolBar } from 'vs/base/browser/ui/toolbar/toolbar';
+import { withNullAsUndefined } from 'vs/base/common/types';
 
 const $ = DOM.$;
 
@@ -58,7 +58,7 @@ const evenRowBackgroundColor = new Color(new RGBA(130, 130, 130, 0.04));
 
 class ThemableCheckboxActionViewItem extends CheckboxActionViewItem {
 
-	constructor(context: any, action: IAction, options: IBaseActionViewItemOptions | undefined, private readonly themeService: IThemeService) {
+	constructor(context: any, action: IAction, options: IActionViewItemOptions | undefined, private readonly themeService: IThemeService) {
 		super(context, action, options);
 	}
 
@@ -368,19 +368,20 @@ export class KeybindingsEditor extends EditorPane implements IKeybindingsEditorP
 			}
 		}));
 
-		const actionBar = this._register(new ToolBar(this.actionsContainer, this.contextMenuService, {
+		const actionBar = this._register(new ActionBar(this.actionsContainer, {
+			animated: false,
 			actionViewItemProvider: (action: IAction) => {
 				if (action.id === KEYBINDINGS_EDITOR_COMMAND_SORTBY_PRECEDENCE || action.id === KEYBINDINGS_EDITOR_COMMAND_RECORD_SEARCH_KEYS) {
-					return new ThemableCheckboxActionViewItem(null, action, undefined, this.themeService);
+					return new ThemableCheckboxActionViewItem(null, action, { keybinding: withNullAsUndefined(this.keybindingsService.lookupKeybinding(action.id)?.getLabel()) }, this.themeService);
 				}
 				return undefined;
 			},
-			getKeyBinding: action => this.keybindingsService.lookupKeybinding(action.id),
 		}));
 
-		actionBar.setActions(this.searchToolbarMenuActions.getPrimaryActions());
+		this.searchToolbarMenuActions.getPrimaryActions().forEach(action => actionBar.push(action, { icon: true, label: false, keybinding: withNullAsUndefined(this.keybindingsService.lookupKeybinding(action.id)?.getLabel()) }));
 		this._register(this.searchToolbarMenuActions.onDidChange(e => {
-			actionBar.setActions(this.searchToolbarMenuActions.getPrimaryActions());
+			actionBar.clear();
+			this.searchToolbarMenuActions.getPrimaryActions().forEach(action => actionBar.push(action, { icon: true, label: false, keybinding: withNullAsUndefined(this.keybindingsService.lookupKeybinding(action.id)?.getLabel()) }));
 		}));
 	}
 
