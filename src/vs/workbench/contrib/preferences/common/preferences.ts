@@ -7,6 +7,7 @@ import { createDecorator } from 'vs/platform/instantiation/common/instantiation'
 import { RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { ISettingsEditorModel, ISearchResult } from 'vs/workbench/services/preferences/common/preferences';
 import { CancellationToken } from 'vs/base/common/cancellation';
+import { MenuId } from 'vs/platform/actions/common/actions';
 
 export interface IWorkbenchSettingsConfiguration {
 	workbench: {
@@ -40,6 +41,8 @@ export interface ISearchProvider {
 	searchModel(preferencesModel: ISettingsEditorModel, token?: CancellationToken): Promise<ISearchResult | null>;
 }
 
+export const MENU_KEYBINDINGS_EDITOR_SEARCH_TOOLBAR = new MenuId('KeybindingsEditorSearchToolbar');
+
 export const SETTINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS = 'settings.action.clearSearchResults';
 export const SETTINGS_EDITOR_COMMAND_SHOW_CONTEXT_MENU = 'settings.action.showContextMenu';
 
@@ -51,6 +54,7 @@ export const CONTEXT_SETTINGS_ROW_FOCUS = new RawContextKey<boolean>('settingRow
 export const CONTEXT_KEYBINDINGS_EDITOR = new RawContextKey<boolean>('inKeybindings', false);
 export const CONTEXT_KEYBINDINGS_SEARCH_FOCUS = new RawContextKey<boolean>('inKeybindingsSearch', false);
 export const CONTEXT_KEYBINDING_FOCUS = new RawContextKey<boolean>('keybindingFocus', false);
+export const CONTEXT_RECORD_KEYS_CHECKED = new RawContextKey<boolean>('recordKeysChecked', false);
 
 export const KEYBINDINGS_EDITOR_COMMAND_SEARCH = 'keybindings.editor.searchKeybindings';
 export const KEYBINDINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS = 'keybindings.editor.clearSearchResults';
