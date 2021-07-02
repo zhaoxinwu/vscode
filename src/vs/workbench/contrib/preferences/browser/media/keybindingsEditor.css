@@ -27,6 +27,7 @@
 
 .keybindings-editor > .keybindings-header > .search-container > .keybindings-search-actions-container > .recording-badge {
 	margin-right: 8px;
+	padding: 3px;
 }
 
 .keybindings-editor > .keybindings-header.small > .search-container > .keybindings-search-actions-container > .recording-badge,

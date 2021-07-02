@@ -42,20 +42,18 @@ const defaultOpts = {
 export class CheckboxActionViewItem extends BaseActionViewItem {
 
 	protected checkbox: Checkbox | undefined;
-	protected readonly disposables = new DisposableStore();
+	protected readonly disposables = this._register(new DisposableStore());
 
 	override render(container: HTMLElement): void {
 		this.element = container;
 
-		this.disposables.clear();
-		this.checkbox = new Checkbox({
+		this.checkbox = this.disposables.add(new Checkbox({
 			actionClassName: this._action.class,
 			isChecked: this._action.checked,
-			title: this._action.label,
+			title: this._action.tooltip,
 			notFocusable: true
-		});
-		this.disposables.add(this.checkbox);
-		this.disposables.add(this.checkbox.onChange(() => this._action.checked = !!this.checkbox && this.checkbox.checked, this));
+		}));
+		this.disposables.add(this.checkbox.onChange(() => this.onCheckboxChange()));
 		this.element.appendChild(this.checkbox.domNode);
 	}
 
@@ -72,6 +70,18 @@ export class CheckboxActionViewItem extends BaseActionViewItem {
 	override updateChecked(): void {
 		if (this.checkbox) {
 			this.checkbox.checked = this._action.checked;
+		}
+	}
+
+	override updateLabel(): void {
+		if (this.checkbox) {
+			this.checkbox.updateTitle(this._action.label);
+		}
+	}
+
+	override updateTooltip(): void {
+		if (this.checkbox) {
+			this.checkbox.updateTitle(this._action.tooltip || this._action.label);
 		}
 	}
 
@@ -95,10 +105,11 @@ export class CheckboxActionViewItem extends BaseActionViewItem {
 		}
 	}
 
-	override dispose(): void {
-		this.disposables.dispose();
-		super.dispose();
+	private onCheckboxChange(): void {
+		this._action.checked = !!this.checkbox && this.checkbox.checked;
+		this.actionRunner.run(this._action, this._context);
 	}
+
 }
 
 export class Checkbox extends Widget {
@@ -132,14 +143,13 @@ export class Checkbox extends Widget {
 		}
 
 		this.domNode = document.createElement('div');
-		this.domNode.title = this._opts.title;
 		this.domNode.classList.add(...classes);
 		if (!this._opts.notFocusable) {
 			this.domNode.tabIndex = 0;
 		}
 		this.domNode.setAttribute('role', 'checkbox');
 		this.domNode.setAttribute('aria-checked', String(this._checked));
-		this.domNode.setAttribute('aria-label', this._opts.title);
+		this.updateTitle(this._opts.title);
 
 		this.applyStyles();
 
@@ -215,6 +225,11 @@ export class Checkbox extends Widget {
 
 	disable(): void {
 		this.domNode.setAttribute('aria-disabled', String(true));
+	}
+
+	updateTitle(title: string): void {
+		this.domNode.title = title;
+		this.domNode.setAttribute('aria-label', title);
 	}
 }
 

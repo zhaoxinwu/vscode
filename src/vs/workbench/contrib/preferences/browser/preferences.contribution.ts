@@ -32,14 +32,14 @@ import { KeybindingsEditor } from 'vs/workbench/contrib/preferences/browser/keyb
 import { ConfigureLanguageBasedSettingsAction } from 'vs/workbench/contrib/preferences/browser/preferencesActions';
 import { PreferencesEditor } from 'vs/workbench/contrib/preferences/browser/preferencesEditor';
 import { SettingsEditor2, SettingsFocusContext } from 'vs/workbench/contrib/preferences/browser/settingsEditor2';
-import { CONTEXT_KEYBINDINGS_EDITOR, CONTEXT_KEYBINDINGS_SEARCH_FOCUS, CONTEXT_KEYBINDING_FOCUS, CONTEXT_SETTINGS_EDITOR, CONTEXT_SETTINGS_JSON_EDITOR, CONTEXT_SETTINGS_ROW_FOCUS, CONTEXT_SETTINGS_SEARCH_FOCUS, CONTEXT_TOC_ROW_FOCUS, KEYBINDINGS_EDITOR_COMMAND_ADD, KEYBINDINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS, KEYBINDINGS_EDITOR_COMMAND_COPY, KEYBINDINGS_EDITOR_COMMAND_COPY_COMMAND, KEYBINDINGS_EDITOR_COMMAND_DEFINE, KEYBINDINGS_EDITOR_COMMAND_DEFINE_WHEN, KEYBINDINGS_EDITOR_COMMAND_FOCUS_KEYBINDINGS, KEYBINDINGS_EDITOR_COMMAND_RECORD_SEARCH_KEYS, KEYBINDINGS_EDITOR_COMMAND_REMOVE, KEYBINDINGS_EDITOR_COMMAND_RESET, KEYBINDINGS_EDITOR_COMMAND_SEARCH, KEYBINDINGS_EDITOR_COMMAND_SHOW_SIMILAR, KEYBINDINGS_EDITOR_COMMAND_SORTBY_PRECEDENCE, KEYBINDINGS_EDITOR_SHOW_DEFAULT_KEYBINDINGS, KEYBINDINGS_EDITOR_SHOW_EXTENSION_KEYBINDINGS, KEYBINDINGS_EDITOR_SHOW_USER_KEYBINDINGS, MODIFIED_SETTING_TAG, SETTINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS, SETTINGS_EDITOR_COMMAND_SHOW_CONTEXT_MENU, REQUIRE_TRUSTED_WORKSPACE_SETTING_TAG, CONTEXT_RECORD_KEYS_CHECKED, MENU_KEYBINDINGS_EDITOR_SEARCH_TOOLBAR } from 'vs/workbench/contrib/preferences/common/preferences';
+import { CONTEXT_KEYBINDINGS_EDITOR, CONTEXT_KEYBINDINGS_SEARCH_FOCUS, CONTEXT_KEYBINDING_FOCUS, CONTEXT_SETTINGS_EDITOR, CONTEXT_SETTINGS_JSON_EDITOR, CONTEXT_SETTINGS_ROW_FOCUS, CONTEXT_SETTINGS_SEARCH_FOCUS, CONTEXT_TOC_ROW_FOCUS, KEYBINDINGS_EDITOR_COMMAND_ADD, KEYBINDINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS, KEYBINDINGS_EDITOR_COMMAND_COPY, KEYBINDINGS_EDITOR_COMMAND_COPY_COMMAND, KEYBINDINGS_EDITOR_COMMAND_DEFINE, KEYBINDINGS_EDITOR_COMMAND_DEFINE_WHEN, KEYBINDINGS_EDITOR_COMMAND_FOCUS_KEYBINDINGS, KEYBINDINGS_EDITOR_COMMAND_RECORD_SEARCH_KEYS, KEYBINDINGS_EDITOR_COMMAND_REMOVE, KEYBINDINGS_EDITOR_COMMAND_RESET, KEYBINDINGS_EDITOR_COMMAND_SEARCH, KEYBINDINGS_EDITOR_COMMAND_SHOW_SIMILAR, KEYBINDINGS_EDITOR_COMMAND_SORTBY_PRECEDENCE, KEYBINDINGS_EDITOR_SHOW_DEFAULT_KEYBINDINGS, KEYBINDINGS_EDITOR_SHOW_EXTENSION_KEYBINDINGS, KEYBINDINGS_EDITOR_SHOW_USER_KEYBINDINGS, MODIFIED_SETTING_TAG, SETTINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS, SETTINGS_EDITOR_COMMAND_SHOW_CONTEXT_MENU, REQUIRE_TRUSTED_WORKSPACE_SETTING_TAG, CONTEXT_RECORD_KEYS_CHECKED, MENU_KEYBINDINGS_EDITOR_SEARCH_TOOLBAR, CONTEXT_SORTBY_PRECEDENCE_CHECKED, CONTEXT_CLEAR_SEARCH_ENABLED } from 'vs/workbench/contrib/preferences/common/preferences';
 import { PreferencesContribution } from 'vs/workbench/contrib/preferences/common/preferencesContribution';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { IExtensionService } from 'vs/workbench/services/extensions/common/extensions';
 import { IPreferencesService } from 'vs/workbench/services/preferences/common/preferences';
 import { DefaultPreferencesEditorInput, PreferencesEditorInput, SettingsEditor2Input } from 'vs/workbench/services/preferences/common/preferencesEditorInput';
-import { keybindingsRecordKeysIcon, preferencesOpenSettingsIcon } from 'vs/workbench/contrib/preferences/browser/preferencesIcons';
+import { keybindingsRecordKeysIcon, keybindingsSortIcon, preferencesClearInputIcon, preferencesOpenSettingsIcon } from 'vs/workbench/contrib/preferences/browser/preferencesIcons';
 import { KeybindingsEditorInput } from 'vs/workbench/services/preferences/browser/keybindingsEditorInput';
 import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { AbstractSideBySideEditorInputSerializer } from 'vs/workbench/common/editor/sideBySideEditorInput';
@@ -965,12 +965,73 @@ class PreferencesActionsContribution extends Disposable implements IWorkbenchCon
 		registerAction2(class extends Action2 {
 			constructor() {
 				super({
-					id: KEYBINDINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS,
-					title: nls.localize('clear', "Clear Search Results"),
+					id: KEYBINDINGS_EDITOR_COMMAND_RECORD_SEARCH_KEYS,
+					title: { value: nls.localize('recordKeysLabel', "Record Keys"), original: 'Record Keys' },
+					toggled: CONTEXT_RECORD_KEYS_CHECKED,
+					icon: keybindingsRecordKeysIcon,
 					keybinding: {
 						weight: KeybindingWeight.WorkbenchContrib,
-						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR, CONTEXT_KEYBINDINGS_SEARCH_FOCUS),
+						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR),
+						primary: KeyMod.Alt | KeyCode.KEY_K,
+						mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_K },
+					},
+					menu: {
+						id: MENU_KEYBINDINGS_EDITOR_SEARCH_TOOLBAR,
+						group: 'navigation',
+						order: 1,
+					}
+				});
+			}
+			run(accessor: ServicesAccessor) {
+				const editorPane = accessor.get(IEditorService).activeEditorPane;
+				if (editorPane instanceof KeybindingsEditor) {
+					editorPane.toggleRecordSearchKeys();
+				}
+			}
+		});
+		registerAction2(class extends Action2 {
+			constructor() {
+				super({
+					id: KEYBINDINGS_EDITOR_COMMAND_SORTBY_PRECEDENCE,
+					title: { value: nls.localize('sortByPrecedeneLabel', "Sort by Precedence"), original: 'Sort by Precedence' },
+					toggled: CONTEXT_SORTBY_PRECEDENCE_CHECKED,
+					icon: keybindingsSortIcon,
+					keybinding: {
+						weight: KeybindingWeight.WorkbenchContrib,
+						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR),
+						primary: KeyMod.Alt | KeyCode.KEY_P,
+						mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_P },
+					},
+					menu: {
+						id: MENU_KEYBINDINGS_EDITOR_SEARCH_TOOLBAR,
+						group: 'navigation',
+						order: 2,
+					}
+				});
+			}
+			run(accessor: ServicesAccessor) {
+				const editorPane = accessor.get(IEditorService).activeEditorPane;
+				if (editorPane instanceof KeybindingsEditor) {
+					editorPane.toggleSortByPrecedence();
+				}
+			}
+		});
+		registerAction2(class extends Action2 {
+			constructor() {
+				super({
+					id: KEYBINDINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS,
+					title: { value: nls.localize('clearInput', "Clear Keybindings Search Input"), original: 'Clear Keybindings Search Input' },
+					precondition: CONTEXT_CLEAR_SEARCH_ENABLED,
+					icon: preferencesClearInputIcon,
+					keybinding: {
+						weight: KeybindingWeight.WorkbenchContrib,
+						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR),
 						primary: KeyCode.Escape,
+					},
+					menu: {
+						id: MENU_KEYBINDINGS_EDITOR_SEARCH_TOOLBAR,
+						group: 'navigation',
+						order: 3,
 					}
 				});
 			}
@@ -978,32 +1039,6 @@ class PreferencesActionsContribution extends Disposable implements IWorkbenchCon
 				const editorPane = accessor.get(IEditorService).activeEditorPane;
 				if (editorPane instanceof KeybindingsEditor) {
 					editorPane.clearSearchResults();
-				}
-			}
-		});
-		registerAction2(class extends Action2 {
-			constructor() {
-				super({
-					id: KEYBINDINGS_EDITOR_COMMAND_RECORD_SEARCH_KEYS,
-					title: { value: nls.localize('recordKeysLabel', "Record Keys"), original: 'Record Keys' },
-					toggled: CONTEXT_RECORD_KEYS_CHECKED,
-					keybinding: {
-						weight: KeybindingWeight.WorkbenchContrib,
-						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR, CONTEXT_KEYBINDINGS_SEARCH_FOCUS),
-						primary: KeyMod.Alt | KeyCode.KEY_K,
-						mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_K },
-					},
-					icon: keybindingsRecordKeysIcon,
-					menu: {
-						id: MENU_KEYBINDINGS_EDITOR_SEARCH_TOOLBAR,
-						when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR, CONTEXT_KEYBINDINGS_SEARCH_FOCUS),
-					}
-				});
-			}
-			run(accessor: ServicesAccessor) {
-				const editorPane = accessor.get(IEditorService).activeEditorPane;
-				if (editorPane instanceof KeybindingsEditor) {
-					editorPane.recordSearchKeys();
 				}
 			}
 		});
@@ -1089,20 +1124,6 @@ class PreferencesActionsContribution extends Disposable implements IWorkbenchCon
 				const editorPane = accessor.get(IEditorService).activeEditorPane;
 				if (editorPane instanceof KeybindingsEditor) {
 					editorPane.focusSearch();
-				}
-			}
-		});
-
-		KeybindingsRegistry.registerCommandAndKeybindingRule({
-			id: KEYBINDINGS_EDITOR_COMMAND_SORTBY_PRECEDENCE,
-			weight: KeybindingWeight.WorkbenchContrib,
-			when: ContextKeyExpr.and(CONTEXT_KEYBINDINGS_EDITOR),
-			primary: KeyMod.Alt | KeyCode.KEY_P,
-			mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_P },
-			handler: (accessor, args: any) => {
-				const editorPane = accessor.get(IEditorService).activeEditorPane;
-				if (editorPane instanceof KeybindingsEditor) {
-					editorPane.toggleSortByPrecedence();
 				}
 			}
 		});

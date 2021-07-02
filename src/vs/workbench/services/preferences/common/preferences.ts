@@ -280,7 +280,7 @@ export interface IKeybindingsEditorPane extends IEditorPane {
 	focusSearch(): void;
 	clearSearchResults(): void;
 	focusKeybindings(): void;
-	recordSearchKeys(): void;
+	toggleRecordSearchKeys(): void;
 	toggleSortByPrecedence(): void;
 	selectKeybinding(keybindingEntry: IKeybindingItemEntry): void;
 	defineKeybinding(keybindingEntry: IKeybindingItemEntry, add: boolean): Promise<void>;

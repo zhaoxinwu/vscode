@@ -55,6 +55,8 @@ export const CONTEXT_KEYBINDINGS_EDITOR = new RawContextKey<boolean>('inKeybindi
 export const CONTEXT_KEYBINDINGS_SEARCH_FOCUS = new RawContextKey<boolean>('inKeybindingsSearch', false);
 export const CONTEXT_KEYBINDING_FOCUS = new RawContextKey<boolean>('keybindingFocus', false);
 export const CONTEXT_RECORD_KEYS_CHECKED = new RawContextKey<boolean>('recordKeysChecked', false);
+export const CONTEXT_SORTBY_PRECEDENCE_CHECKED = new RawContextKey<boolean>('sortbyPrecedence', false);
+export const CONTEXT_CLEAR_SEARCH_ENABLED = new RawContextKey<boolean>('clearSearchEnabled', false);
 
 export const KEYBINDINGS_EDITOR_COMMAND_SEARCH = 'keybindings.editor.searchKeybindings';
 export const KEYBINDINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS = 'keybindings.editor.clearSearchResults';
