@@ -379,7 +379,7 @@ export class KeybindingsEditor extends EditorPane implements IKeybindingsEditorP
 		}));
 
 		this.searchToolbarMenuActions.getPrimaryActions().forEach(action => actionBar.push(action, { icon: true, label: false, keybinding: withNullAsUndefined(this.keybindingsService.lookupKeybinding(action.id)?.getLabel()) }));
-		this._register(this.searchToolbarMenuActions.onDidChange(e => {
+		this._register(Event.any(this.searchToolbarMenuActions.onDidChange, this.keybindingsService.onDidUpdateKeybindings)(() => {
 			actionBar.clear();
 			this.searchToolbarMenuActions.getPrimaryActions().forEach(action => actionBar.push(action, { icon: true, label: false, keybinding: withNullAsUndefined(this.keybindingsService.lookupKeybinding(action.id)?.getLabel()) }));
 		}));
