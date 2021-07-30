@@ -20,6 +20,7 @@ import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/c
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { TerminalContextKeys } from 'vs/workbench/contrib/terminal/common/terminalContextKey';
 import { Emitter } from 'vs/base/common/event';
+import { IResourceEditorInput } from 'vs/platform/editor/common/editor';
 
 export class TerminalEditorInput extends EditorInput {
 
@@ -50,6 +51,15 @@ export class TerminalEditorInput extends EditorInput {
 
 	override get editorId(): string | undefined {
 		return TerminalEditor.ID;
+	}
+
+	public override toUntyped(): IResourceEditorInput {
+		return {
+			resource: this.resource,
+			options: {
+				override: this.typeId
+			}
+		};
 	}
 
 	setTerminalInstance(instance: ITerminalInstance): void {

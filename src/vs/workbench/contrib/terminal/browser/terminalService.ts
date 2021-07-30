@@ -35,6 +35,7 @@ import { IRemoteTerminalService, IRequestAddInstanceToGroupEvent, ITerminalEdito
 import { refreshTerminalActions } from 'vs/workbench/contrib/terminal/browser/terminalActions';
 import { TerminalConfigHelper } from 'vs/workbench/contrib/terminal/browser/terminalConfigHelper';
 import { TerminalEditor } from 'vs/workbench/contrib/terminal/browser/terminalEditor';
+import { TerminalEditorInput } from 'vs/workbench/contrib/terminal/browser/terminalEditorInput';
 import { getColorClass, getUriClasses } from 'vs/workbench/contrib/terminal/browser/terminalIcon';
 import { configureTerminalProfileIcon } from 'vs/workbench/contrib/terminal/browser/terminalIcons';
 import { getInstanceFromResource, getTerminalUri, parseTerminalUri } from 'vs/workbench/contrib/terminal/browser/terminalUri';
@@ -44,6 +45,7 @@ import { TerminalContextKeys } from 'vs/workbench/contrib/terminal/common/termin
 import { ITerminalContributionService } from 'vs/workbench/contrib/terminal/common/terminalExtensionPoints';
 import { formatMessageForTerminal, terminalStrings } from 'vs/workbench/contrib/terminal/common/terminalStrings';
 import { IEditorResolverService, RegisteredEditorPriority } from 'vs/workbench/services/editor/common/editorResolverService';
+import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { IExtensionService } from 'vs/workbench/services/extensions/common/extensions';
 import { ILifecycleService, ShutdownReason, WillShutdownEvent } from 'vs/workbench/services/lifecycle/common/lifecycle';
@@ -171,6 +173,7 @@ export class TerminalService implements ITerminalService {
 		@IEditorResolverService editorResolverService: IEditorResolverService,
 		@IExtensionService private readonly _extensionService: IExtensionService,
 		@INotificationService private readonly _notificationService: INotificationService,
+		@IEditorService private readonly _editorService: IEditorService,
 		@optional(ILocalTerminalService) localTerminalService: ILocalTerminalService
 	) {
 		this._localTerminalService = localTerminalService;
@@ -198,14 +201,30 @@ export class TerminalService implements ITerminalService {
 						sourceGroup.removeInstance(instance);
 					}
 				}
-				return {
-					editor: this._terminalEditorService.getOrCreateEditorInput(instance || resource),
-					options: {
-						...options,
-						pinned: true,
-						forceReload: true
-					}
-				};
+				const source = this._terminalEditorService.getOrCreateResource(instance || resource);
+				if (URI.isUri(source)) {
+					// untyped
+					return {
+						editor: this._editorService.createEditorInput(
+							{
+								resource,
+								options: {
+									override: TerminalEditorInput.ID
+								}
+							}
+						)
+					};
+				}
+				else {
+					return {
+						editor: source,
+						options: {
+							...options,
+							pinned: true,
+							forceReload: true
+						}
+					};
+				}
 			}
 		);
 

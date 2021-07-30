@@ -152,6 +152,8 @@ export class EditorResolverService extends Disposable implements IEditorResolver
 		}
 
 		// Resolved the editor ID as much as possible, now find a given editor (cast here is ok because we resolve down to a string above)
+		console.log(resource);
+		console.log(untypedEditor.options?.override);
 		const { editor: selectedEditor, conflictingDefault } = this.getEditor(resource, untypedEditor.options?.override as (string | EditorResolution.EXCLUSIVE_ONLY | undefined));
 		if (!selectedEditor) {
 			return ResolvedStatus.NONE;
