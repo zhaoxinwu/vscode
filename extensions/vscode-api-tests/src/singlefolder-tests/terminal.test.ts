@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { deepEqual, deepStrictEqual, doesNotThrow, equal, strictEqual, throws } from 'assert';
-import { ConfigurationTarget, Disposable, env, EnvironmentVariableMutator, EnvironmentVariableMutatorType, EventEmitter, ExtensionContext, extensions, ExtensionTerminalOptions, Pseudoterminal, Terminal, TerminalDimensions, TerminalOptions, TerminalState, UIKind, window, workspace } from 'vscode';
+import { ConfigurationTarget, Disposable, env, EnvironmentVariableMutator, EnvironmentVariableMutatorType, EventEmitter, ExtensionContext, extensions, ExtensionTerminalOptions, Pseudoterminal, Terminal, TerminalDimensions, TerminalOptions, TerminalState, UIKind, ViewColumn, window, workspace } from 'vscode';
 import { assertNoRpc } from '../utils';
 
 // Disable terminal tests:
@@ -341,6 +341,37 @@ import { assertNoRpc } from '../utils';
 					}));
 					terminal.dispose();
 				});
+			});
+		});
+
+		suite('terminal editors location API', () => {
+			test.only('should create terminal in the editor area', async () => {
+				strictEqual(0, window.terminals.length);
+				const terminal = window.createTerminal({ name: 'editor', location: { viewColumn: ViewColumn.Active, preserveFocus: true } });
+				const result = await new Promise<Terminal>(r => {
+					disposables.push(window.onDidOpenTerminal(t => {
+						if (t === terminal) {
+							r(t);
+						}
+					}));
+				});
+				strictEqual(result, terminal);
+				strictEqual(1, window.terminals.length);
+				// This API doesn't work yet (proposed)
+				// await new Promise<void>(() => {
+				// 	disposables.push(window.onDidChangeOpenEditors(() => {
+				// 		equal('vscode-terminal', window.openEditors.find(e => e.isActive)?.resource.scheme);
+				// 	}));
+				// });
+				await new Promise<void>(r => {
+					disposables.push(window.onDidCloseTerminal(t => {
+						if (t === terminal) {
+							r();
+						}
+					}));
+					terminal.dispose();
+				});
+				strictEqual(0, window.terminals.length);
 			});
 		});
 
