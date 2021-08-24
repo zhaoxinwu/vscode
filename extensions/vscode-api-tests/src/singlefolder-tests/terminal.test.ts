@@ -363,7 +363,7 @@ import { assertNoRpc } from '../utils';
 				// 		equal('vscode-terminal', window.openEditors.find(e => e.isActive)?.resource.scheme);
 				// 	}));
 				// });
-				terminal.dispose();
+				setTimeout(() => terminal.dispose(), 200);
 				strictEqual(0, window.terminals.length);
 			});
 		});
