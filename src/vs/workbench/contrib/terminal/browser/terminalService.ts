@@ -316,9 +316,7 @@ export class TerminalService implements ITerminalService {
 		// Create async as the class depends on `this`
 		timeout(0).then(() => this._instantiationService.createInstance(TerminalEditorStyle, document.head));
 
-		//TODO:@meganrogge is there a better way to do this?
 		this.onDidReceiveProcessId(async () => await this._refreshDescriptionCwd());
-		this.onDidDisposeInstance(async () => await this._refreshDescriptionCwd());
 	}
 
 	private async _refreshDescriptionCwd(): Promise<void> {

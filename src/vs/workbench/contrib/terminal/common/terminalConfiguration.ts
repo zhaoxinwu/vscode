@@ -11,17 +11,23 @@ import { isMacintosh, isWindows } from 'vs/base/common/platform';
 import { Registry } from 'vs/platform/registry/common/platform';
 let terminalTitleDescription = localize('terminalTitle', "Controls the terminal title. Variables are substituted based on the context:");
 terminalTitleDescription += '\n- ' + [
+	localize('cwd', "`\${cwd}`: the terminal's current working directory - on Windows, this won't dynamically update"),
+	localize('cwdFolder', "`\${cwdFolder}`: the terminal's current folder - on Windows, this won't dynamically update"),
+	localize('local', "`\${local}`: indicates a local terminal in a remote workspace"),
 	localize('process', "`\${process}`: the name of the terminal process"),
 	localize('sequence', "`\${sequence}`: the name provided to xterm.js by the process"),
+	localize('task', "`\${task}`: indicates this terminal is associated with a task"),
 	localize('separator', "`\${separator}`: a conditional separator (\" - \") that only shows when surrounded by variables with values or static text.")
 ].join('\n- '); // intentionally concatenated to not produce a string that is too long for translations
 
 let terminalDescriptionDescription = localize('terminalDescription', "Controls the terminal description, which appears to the right of the title. Variables are substituted based on the context:");
 terminalDescriptionDescription += '\n- ' + [
-	localize('task', "`\${task}`: indicates this terminal is associated with a task"),
+	localize('cwd', "`\${cwd}`: the terminal's current working directory - on Windows, this won't dynamically update"),
+	localize('cwdFolder', "`\${cwdFolder}`: the terminal's current folder - on Windows, this won't dynamically update"),
 	localize('local', "`\${local}`: indicates a local terminal in a remote workspace"),
-	localize('cwd', "`\${cwd}`: the terminal's current working directory"),
-	localize('cwdFolder', "`\${cwdFolder}`: the terminal's current folder"),
+	localize('process', "`\${process}`: the name of the terminal process"),
+	localize('sequence', "`\${sequence}`: the name provided to xterm.js by the process"),
+	localize('task', "`\${task}`: indicates this terminal is associated with a task"),
 	localize('separator', "`\${separator}`: a conditional separator (\" - \") that only shows when surrounded by variables with values or static text.")
 ].join('\n- '); // intentionally concatenated to not produce a string that is too long for translations
 
