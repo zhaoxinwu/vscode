@@ -2322,6 +2322,9 @@ export class TerminalLabelComputer extends Disposable {
 		}
 		const detection = this._instance.capabilities.includes(ProcessCapability.CwdDetection);
 		const zeroRootWorkspace = this._workspaceContextService.getWorkspace().folders.length === 0 && templateProperties.cwd === (this._instance.userHome || this._configHelper.config.cwd);
+		console.log(templateProperties.cwd);
+		console.log(this._configHelper.config.cwd);
+		console.log(this._workspaceContextService.getWorkspace().folders[0]?.uri.fsPath);
 		const singleRootWorkspace = this._workspaceContextService.getWorkspace().folders.length === 1 && templateProperties.cwd === (this._configHelper.config.cwd || this._workspaceContextService.getWorkspace().folders[0]?.uri.fsPath);
 		templateProperties.cwdFolder = (!templateProperties.cwd || !detection || zeroRootWorkspace || singleRootWorkspace) ? '' : path.basename(templateProperties.cwd);
 
