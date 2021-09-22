@@ -2338,6 +2338,10 @@ export class TerminalLabelComputer extends Disposable {
 		}
 		const split1 = path1.includes('/') ? path1.split('/') : path1.split('\\');
 		const split2 = path2.includes('/') ? path2.split('/') : path2.split('\\');
+		console.log(path1);
+		console.log(path2);
+		console.log(split1);
+		console.log(split2);
 		if (split1.length !== split2.length) {
 			return false;
 		}
